@@ -56,7 +56,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
 
-        title: Text(widget.title),
+          title: Text("ABCDE"),
+          actions: [
+            OutlinedButton(onPressed: () { }, child:Text("Button 1")),
+            OutlinedButton(onPressed: (){ }, child: Text("Button 2"))]
+
       ),
       body: Center(
 
