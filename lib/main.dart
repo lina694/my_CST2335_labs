@@ -62,7 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
         child: Column(
 
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             ElevatedButton(onPressed: () {}, child: Text('Button 1')),
             ElevatedButton(onPressed: () {}, child: Text('Button 2')),
