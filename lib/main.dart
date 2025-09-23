@@ -63,13 +63,11 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
 
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:', style: TextStyle(fontSize: 30)),
-            Text(
-              '$_counter', style: TextStyle(fontSize: 30
-            ),
-            ),
-            Slider(value:_counter, max:100.0, onChanged: setNewValue, min:0.0)
+          children: [
+            ElevatedButton(onPressed: () {}, child: Text('Button 1')),
+            ElevatedButton(onPressed: () {}, child: Text('Button 2')),
+            ElevatedButton(onPressed: () {}, child: Text('Button 3')),
+            ElevatedButton(onPressed: () {}, child: Text('Button 4')),
           ],
         ),
       ),
