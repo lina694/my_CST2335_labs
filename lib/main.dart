@@ -65,6 +65,12 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       drawer:Drawer(
           child:Text("Hi there")),
+      bottomNavigationBar: BottomNavigationBar(items: [
+        BottomNavigationBarItem( icon: Icon(Icons.camera), label: 'Camera' ),
+        BottomNavigationBarItem( icon: Icon(Icons.add_call), label: 'Phone'  ),
+      ],
+        onTap: (buttonIndex) {  } ,
+      ),
       body: Center(
 
         child: Column(
