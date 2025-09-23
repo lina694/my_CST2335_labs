@@ -63,6 +63,8 @@ class _MyHomePageState extends State<MyHomePage> {
             OutlinedButton(onPressed: (){ }, child: Text("Button 2"))]
 
       ),
+      drawer:Drawer(
+          child:Text("Hi there")),
       body: Center(
 
         child: Column(
