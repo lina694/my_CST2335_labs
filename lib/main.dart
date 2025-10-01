@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
+import 'package:flutter/foundation.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,174 +12,217 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Recipe Categories',
+      title: 'Login Page',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        scaffoldBackgroundColor: Colors.white,
       ),
-      home: const Lab3Layout(),
+      // Set debugShowCheckedModeBanner to false to remove the "Debug" banner (Question 4 from earlier)
+      debugShowCheckedModeBanner: false,
+      home: const LoginPage(),
     );
   }
 }
 
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
 
-class Lab3Layout extends StatelessWidget {
-  const Lab3Layout({super.key});
+class _LoginPageState extends State<LoginPage> {
+  // Controllers to get text input
+  final TextEditingController loginController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
-  // Helper method to create the image Stack (used for all image rows)
-  Widget _buildImageStack(String assetName, String label, Alignment alignment) {
-    // Check if the text is supposed to be placed below the image (for Course/Dessert)
-    final bool isBottomAligned = alignment == Alignment.bottomCenter;
-    const double imageRadius = 60.0; // INCREASED RADIUS for bigger size
+  // Keys for EncryptedSharedPreferences
+  static const String _keyUsername = 'saved_username';
+  static const String _keyPassword = 'saved_password';
 
-    return Column(
-      // Centers the label below the circular image
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Stack(
-          alignment: alignment,
-          children: [
-            // Using CircleAvatar for the circular frame effect on all images
-            CircleAvatar(
-              backgroundImage: AssetImage('images/$assetName'),
-              radius: imageRadius, // Using the new, larger radius
-            ),
-            // Text is overlay in the center for 'BY MEAT'
-            if (!isBottomAligned)
-              Container(
-                alignment: Alignment.center,
-                // Using SizedBox to force the text to fit within the circle's bounds
-                child: SizedBox(
-                  width: imageRadius * 1.5,
-                  height: imageRadius * 1.5,
-                  child: Center(
-                    child: Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        backgroundColor: Colors.black54,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        // Text is placed BELOW the image for 'BY COURSE' and 'BY DESSERT' (to match the image)
-        if (isBottomAligned)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
-      ],
-    );
+  // Image source variable
+  String imageSource = "assets/images/question-mark.png";
+
+  @override
+  void initState() {
+    super.initState();
+    // 1. Load credentials when the program starts
+    _loadCredentials();
   }
 
-  // Helper method to create the image rows
-  Widget _buildImageRow(List<String> imagePaths, List<String> labels, Alignment alignment) {
-    return Padding(
-      // Reduced vertical padding slightly
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Row(
-        // FIX: Changed from spaceAround to CENTER to group images closely together.
-        mainAxisAlignment: MainAxisAlignment.center,
-        // Adding a small horizontal gap between the images themselves
-        children: List.generate(imagePaths.length, (index) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5.0), // Adds a 5-pixel gap on both sides of each image
-            child: _buildImageStack(imagePaths[index], labels[index], alignment),
+  // --- Secure Storage and SnackBar Logic ---
+
+
+   //Loads saved username and password from EncryptedSharedPreferences (via SharedPreferences).
+   //If found, populates TextFields and shows a SnackBar.
+
+  Future<void> _loadCredentials() async {
+    try {
+      // SharedPreferences uses secure storage when flutter_secure_storage is available
+      final prefs = await SharedPreferences.getInstance();
+
+      final String? savedUsername = prefs.getString(_keyUsername);
+      final String? savedPassword = prefs.getString(_keyPassword);
+
+      if (savedUsername != null && savedPassword != null) {
+        // If saved strings are found, load them into the TextFields
+        setState(() {
+          loginController.text = savedUsername;
+          passwordController.text = savedPassword;
+        });
+
+        // 4. Show a SnackBar that the previous credentials have been loaded
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Previous login name and password loaded from secure storage.'),
+              duration: Duration(seconds: 4),
+            ),
           );
-        }),
-      ),
-    );
+        }
+      }
+    } catch (e) {
+      // Handle potential decryption errors or storage issues
+      print('Error loading saved data: $e');
+    }
   }
+   //Saves the current credentials to EncryptedSharedPreferences.
 
-
-  // Helper method for category titles
-  Widget _buildCategoryTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.5,
+  Future<void> _saveCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUsername, loginController.text);
+    await prefs.setString(_keyPassword, passwordController.text);
+    if (kDebugMode) {
+      print('Credentials saved successfully.');
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Login saved for next time!'),
+          duration: Duration(seconds: 2),
         ),
-      ),
+      );
+    }
+  }
+
+   // Clears all saved credentials from EncryptedSharedPreferences.
+  Future<void> _clearCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyUsername);
+    await prefs.remove(_keyPassword);
+    if (kDebugMode) {
+      print('Saved credentials cleared.');
+    }
+  }
+
+
+  // --- Login Button Handler ---
+
+  void _login() {
+    // 2. Show an AlertDialog asking whether the user wants to save credentials
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Save Credentials?'),
+          content: const Text(
+              'Would you like to save your username and password for your next session?'),
+          actions: <Widget>[
+            TextButton(
+              // "No" button logic
+              child: const Text('NO / CLEAR'),
+              onPressed: () {
+                _clearCredentials(); // Clear any existing data
+                Navigator.of(context).pop();
+                _performImageUpdateAndLogin(); // Proceed with login/image logic
+              },
+            ),
+            TextButton(
+              // "Yes" button logic
+              child: const Text('YES / SAVE'),
+              onPressed: () {
+                _saveCredentials(); // Save the current text field contents
+                Navigator.of(context).pop();
+                _performImageUpdateAndLogin(); // Proceed with login/image logic
+              },
+            ),
+          ],
+        );
+      },
     );
   }
+
+
+   //Separated logic to run after the AlertDialog is closed.
+  void _performImageUpdateAndLogin() {
+    String password = passwordController.text;
+    print("Enter password: $password");
+
+    // Existing Image logic
+    setState(() {
+      if (password == "QWERTY123"){
+        imageSource = "images/light-bulb.png";
+      } else if (password != "ASDF") {
+        imageSource = "images/stop-sign.png";
+      }else {
+        imageSource = "images/question-mark.png";
+      }
+    });
+
+    // In a real app, successful login would navigate to a new screen here.
+  }
+
+  // --- Widget Build Method ---
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(toolbarHeight: 0),
-      // Keeping SingleChildScrollView to prevent overflow
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              // ... (Title and Description widgets) ...
-              const Text(
-                'BROWSE CATEGORIES',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 6),
+      appBar: AppBar(title: const Text('Login Page')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Login name TextField
+            TextField(
+              controller: loginController,
+              decoration: const InputDecoration(
+                labelText: 'Login name',
+                border: OutlineInputBorder(),
               ),
-              const Padding(
-                padding: EdgeInsets.only(top: 20.0, bottom: 24.0),
-                child: Text(
-                  'Not sure about exactly which recipe you\'re looking for? Do a search, or dive into our most popular categories.',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(fontSize: 18, color: Colors.black),
-                ),
-              ),
+            ),
+            const SizedBox(height: 16),
 
-              // 2. BY MEAT Category
-              _buildCategoryTitle('BY MEAT'),
-              _buildImageRow(
-                ['beef.png', 'chicken.png', 'pork.png', 'seafood.png'],
-                ['BEEF', 'CHICKEN', 'PORK', 'SEAFOOD'],
-                Alignment.center,
+            // Password TextField with obscureText
+            TextField(
+              controller: passwordController,
+              obscureText: true,  // hide password input
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 20),
 
-              // 3. BY COURSE Category
-              _buildCategoryTitle('BY COURSE'),
-              _buildImageRow(
-                [
-                  'main_dishes.png',
-                  'salad.png',
-                  'side_dishes.png',
-                  'crockpot.png'
-                ],
-                ['Main Dishes', 'Salad Recipes', 'Side Dishes', 'Crockpot'],
-                Alignment.bottomCenter,
-              ),
+            // Login button
+            ElevatedButton(
+              onPressed: _login, // Now calls the method that shows the AlertDialog
+              child: const Text('Login'),
+            ),
+            const SizedBox(height: 20),
 
-              // 4. BY DESSERT Category
-              _buildCategoryTitle('BY DESSERT'),
-              _buildImageRow(
-                ['ice_cream.png', 'brownies.png', 'pies.png', 'cookies.png'],
-                ['Ice Cream', 'Brownies', 'Pies', 'Cookies'],
-                Alignment.bottomCenter,
+            // Image with semantics for screen readers
+            Semantics(
+              label: 'Status Indicator',
+              child: Image.asset(
+                imageSource,
+                width: 300,
+                height: 300,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
-  }
+}
