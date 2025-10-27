@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
-import 'package:flutter/foundation.dart';
-import 'user_repository.dart';
-import 'profile_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,128 +10,216 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Week 5 Lab',
+      title: 'Shopping List',
+      debugShowCheckedModeBanner: true,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      // Set debugShowCheckedModeBanner to false to remove the "Debug" banner (Question 4 from earlier)
-      debugShowCheckedModeBanner: false,
-      home: const LoginPage(),
+      home: const ShoppingListPage(),
     );
   }
 }
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class ShoppingListPage extends StatefulWidget {
+  const ShoppingListPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<ShoppingListPage> createState() => _ShoppingListPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
-  // Controllers to get text input
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final UserRepository _repository = UserRepository();
-  bool _isLoading = true;
+class _ShoppingListPageState extends State<ShoppingListPage> {
+  // Controllers for TextFields
+  final TextEditingController _itemController = TextEditingController();
+  final TextEditingController _quantityController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _loadRepositoryData();
-  }
-
-  Future<void> _loadRepositoryData() async {
-    await _repository.loadData();
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
-  void _handleLogin() {
-    String username = _usernameController.text.trim();
-    String password = _passwordController.text.trim();
-
-    // Simple validation - you can customize this
-    if (username.isNotEmpty && password == "password123") {
-      // Navigate to ProfilePage
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ProfilePage(
-            username: username,
-            repository: _repository,
-          ),
-        ),
-      );
-    } else {
-      // Show error
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid username or password'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
+  // List to store shopping items
+  List<Map<String, dynamic>> shoppingItems = [];
 
   @override
   void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
+    _itemController.dispose();
+    _quantityController.dispose();
     super.dispose();
+  }
+
+  // Function to add item to the list
+  void _addItem() {
+    String itemName = _itemController.text.trim();
+    String quantityText = _quantityController.text.trim();
+
+    // Validate input
+    if (itemName.isEmpty || quantityText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter both item name and quantity'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Try to parse quantity as integer
+    int? quantity = int.tryParse(quantityText);
+    if (quantity == null || quantity <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid positive number for quantity'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      // Add item to list
+      shoppingItems.add({
+        'name': itemName,
+        'quantity': quantity,
+      });
+
+      // Clear the TextFields
+      _itemController.clear();
+      _quantityController.clear();
+    });
+  }
+
+  // Function to show delete confirmation dialog
+  void _showDeleteDialog(int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Item'),
+          content: Text('Do you want to delete "${shoppingItems[index]['name']}"?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  shoppingItems.removeAt(index);
+                });
+                Navigator.of(context).pop();
+              },
+              child: const Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ListPage function to build the shopping list UI
+  Widget listPage() {
+    return Column(
+      children: [
+        // Input section with TextFields and Add button
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              // Item name TextField
+              Flexible(
+                flex: 2,
+                child: TextField(
+                  controller: _itemController,
+                  decoration: const InputDecoration(
+                    labelText: 'Type the item here',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Quantity TextField
+              Flexible(
+                flex: 2,
+                child: TextField(
+                  controller: _quantityController,
+                  decoration: const InputDecoration(
+                    labelText: 'Type the quantity here',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Add button
+              ElevatedButton(
+                onPressed: _addItem,
+                child: const Text('Click here'),
+              ),
+            ],
+          ),
+        ),
+
+        // ListView section
+        Expanded(
+          child: shoppingItems.isEmpty
+              ? const Center(
+            child: Text(
+              'There are no items in the list',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+          )
+              : ListView.builder(
+            itemCount: shoppingItems.length,
+            itemBuilder: (context, rowNum) {
+              return GestureDetector(
+                onLongPress: () {
+                  _showDeleteDialog(rowNum);
+                },
+                child: Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 4.0,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Left side: Row number and item name
+                        Expanded(
+                          child: Text(
+                            '${rowNum + 1}: ${shoppingItems[rowNum]['name']}',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        // Right side: Quantity
+                        Text(
+                          'quantity: ${shoppingItems[rowNum]['quantity']}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Login'),
+        title: const Text('Shopping List'),
+        centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: _usernameController,
-              decoration: const InputDecoration(
-                labelText: 'Username',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _handleLogin,
-              child: const Text('Login'),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Hint: Use password "password123"',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-          ],
-        ),
-      ),
+      body: listPage(),
     );
   }
 }
