@@ -31,6 +31,13 @@ dependencies:
   flutter:
     sdk: flutter
 
+    # SQLite database
+  sqflite: ^2.3.0
+  sqflite_common_ffi: ^2.3.0
+  path: ^1.8.3
+
+  path_provider: ^2.1.1
+
   # For EncryptedSharedPreferences (CORRECT INDENTATION)
   shared_preferences: ^2.2.3
   flutter_secure_storage: ^9.0.0
